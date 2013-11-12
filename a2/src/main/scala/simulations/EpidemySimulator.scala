@@ -14,6 +14,8 @@ class EpidemySimulator extends Simulator {
     val roomRows: Int = 8
     val roomColumns: Int = 8
 
+    val moveWithinDays = 5
+
     val becomeSickDay = 6
     val maybeDieDay = 14 - becomeSickDay
     val becomeImmuneDay = 16 - maybeDieDay
@@ -78,6 +80,7 @@ class EpidemySimulator extends Simulator {
       infected = false
       sick = false
       immune = false
+      scheduleMove()
     }
 
     def becomeImmune() {
@@ -86,7 +89,8 @@ class EpidemySimulator extends Simulator {
       assert(!immune)
       assert(!dead)
       immune = true
-      afterDelay(becomeHealthyDay)(becomeHealthy)
+      afterDelay(becomeHealthyDay)(becomeHealthy())
+      scheduleMove()
     }
 
     def maybeDie() {
@@ -97,7 +101,8 @@ class EpidemySimulator extends Simulator {
       if (biasedCoin(deathRate)) {
         dead = true
       } else {
-        afterDelay(becomeImmuneDay)(becomeImmune)
+        afterDelay(becomeImmuneDay)(becomeImmune())
+        scheduleMove()
       }
     }
 
@@ -107,7 +112,8 @@ class EpidemySimulator extends Simulator {
       assert(!immune)
       assert(!dead)
       sick = true
-      afterDelay(maybeDieDay)(maybeDie)
+      afterDelay(maybeDieDay)(maybeDie())
+      scheduleMove()
     }
 
     def moveToRoom(room: Room) {
@@ -115,7 +121,8 @@ class EpidemySimulator extends Simulator {
       col = room.col
       if (canBeInfected && room.hasInfectiousPeople && biasedCoin(transmissibilityRate)) {
         infected = true
-        afterDelay(becomeSickDay)(becomeSick)
+        afterDelay(becomeSickDay)(becomeSick())
+        scheduleMove()
       }
     }
 
@@ -137,6 +144,10 @@ class EpidemySimulator extends Simulator {
       }
     }
 
-    afterDelay(randomBelow(5))(tryMoveToNeighboringRoom())
+    def scheduleMove() {
+      afterDelay(randomBelow(moveWithinDays))(tryMoveToNeighboringRoom())
+    }
+    
+    scheduleMove()
   }
 }
