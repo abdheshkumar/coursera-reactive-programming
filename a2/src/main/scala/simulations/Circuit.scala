@@ -59,15 +59,65 @@ abstract class CircuitSimulator extends Simulator {
   //
 
   def orGate(a1: Wire, a2: Wire, output: Wire) {
-    ???
+    def orAction() {
+      val a1Sig = a1.getSignal
+      val a2Sig = a2.getSignal
+      afterDelay(OrGateDelay) { output.setSignal(a1Sig | a2Sig) }
+    }
+    a1.addAction(orAction)
+    a2.addAction(orAction)
   }
   
   def orGate2(a1: Wire, a2: Wire, output: Wire) {
-    ???
+    def orAction2() {
+      val a1Neg, a2Neg, andResult = new Wire
+      inverter(a1, a1Neg)
+      inverter(a2, a2Neg)
+      andGate(a1Neg, a2Neg, andResult)
+      inverter(andResult, output)
+    }
+    a1.addAction(orAction2)
+    a2.addAction(orAction2)
   }
 
   def demux(in: Wire, c: List[Wire], out: List[Wire]) {
-    ???
+    def demuxRecursive(control: List[Wire], output: List[Wire], wireSoFar: Wire) {
+      control match {
+        case Nil =>
+          assert(output.length == 1)
+          andGate(wireSoFar, in, output.head)
+
+        case c1 :: cs =>
+          val parts = output.grouped(output.length / 2)
+
+          val positiveHalf = parts.next()
+          val positiveWire = new Wire
+          andGate(c1, wireSoFar, positiveWire)
+          demuxRecursive(cs, positiveHalf, positiveWire)
+
+          val negativeHalf = parts.next()
+          val negativeCtrl = new Wire
+          inverter(c1, negativeCtrl)
+          val negativeWire = new Wire
+          andGate(negativeCtrl, wireSoFar, negativeWire)
+          demuxRecursive(cs, negativeHalf, negativeWire)
+      }
+    }
+
+    def demuxAction() {
+      val parts = out.grouped(out.length / 2)
+
+      val positiveHalf = parts.next()
+      demuxRecursive(c.tail, positiveHalf, c.head)
+
+      val negativeHalf = parts.next()
+      val notControl = new Wire
+      inverter(c.head, notControl)
+      demuxRecursive(c.tail, negativeHalf, notControl)
+    }
+
+    in.addAction(demuxAction)
+    c.foreach(_.addAction(demuxAction))
   }
 
 }
