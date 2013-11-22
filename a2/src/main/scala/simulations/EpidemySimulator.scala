@@ -7,6 +7,8 @@ class EpidemySimulator extends Simulator {
 
   def randomBelow(i: Int): Int = (random * i).toInt
 
+  def randomFromOneTo(i: Int): Int = randomBelow(i - 1) + 1
+
   def biasedCoin(trueProb: Double): Boolean = trueProb <= random
 
   protected[simulations] object SimConfig {
@@ -80,7 +82,6 @@ class EpidemySimulator extends Simulator {
       infected = false
       sick = false
       immune = false
-      scheduleMove()
     }
 
     def becomeImmune() {
@@ -89,8 +90,7 @@ class EpidemySimulator extends Simulator {
       assert(!immune)
       assert(!dead)
       immune = true
-      afterDelay(becomeHealthyDay)(becomeHealthy())
-      scheduleMove()
+      changeState()
     }
 
     def maybeDie() {
@@ -102,18 +102,18 @@ class EpidemySimulator extends Simulator {
         dead = true
       } else {
         afterDelay(becomeImmuneDay)(becomeImmune())
-        scheduleMove()
       }
     }
 
     def becomeSick() {
-      assert(infected)
-      assert(!sick)
-      assert(!immune)
-      assert(!dead)
-      sick = true
-      afterDelay(maybeDieDay)(maybeDie())
-      scheduleMove()
+      if (!dead) {
+        assert(infected)
+        assert(!sick)
+        assert(!immune)
+        assert(!dead)
+        sick = true
+        changeState()
+      }
     }
 
     def moveToRoom(room: Room) {
@@ -121,8 +121,19 @@ class EpidemySimulator extends Simulator {
       col = room.col
       if (canBeInfected && room.hasInfectiousPeople && biasedCoin(transmissibilityRate)) {
         infected = true
-        afterDelay(becomeSickDay)(becomeSick())
-        scheduleMove()
+        changeState()
+      }
+    }
+
+    def changeState() {
+      if (!dead) {
+        if (immune) {
+          afterDelay(becomeHealthyDay)(becomeHealthy())
+        } else if (sick) {
+          afterDelay(maybeDieDay)(maybeDie())
+        } else if (infected) {
+          afterDelay(becomeSickDay)(becomeSick())
+        }
       }
     }
 
@@ -141,13 +152,15 @@ class EpidemySimulator extends Simulator {
           val x = randomBelow(rooms.size)
           moveToRoom(rooms(x))
         }
+        scheduleMove()
       }
     }
 
     def scheduleMove() {
-      afterDelay(randomBelow(moveWithinDays))(tryMoveToNeighboringRoom())
+      afterDelay(randomFromOneTo(moveWithinDays))(tryMoveToNeighboringRoom())
     }
     
     scheduleMove()
+    changeState()
   }
 }
