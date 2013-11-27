@@ -16,7 +16,6 @@ import org.scalatest.junit.JUnitRunner
 
 @RunWith(classOf[JUnitRunner])
 class NodeScalaSuite extends FunSuite {
-
   test("A Future should always be created") {
     val always = Future.always(517)
 
@@ -31,6 +30,33 @@ class NodeScalaSuite extends FunSuite {
       assert(false)
     } catch {
       case t: TimeoutException => // ok!
+    }
+  }
+
+  test("all") {
+    val one = Future.always(1)
+    val two = Future.always(2)
+    val three = Future.always(3)
+    val never = Future.never[Int]
+
+    val a = Future.all(List(one, two, three))
+    val ar = Await.result(a, 1 second)
+    assert(ar === List(1, 2, 3))
+
+    val b = Future.all(List(three, one, two))
+    val br = Await.result(b, 1 second)
+    assert(br === List(3, 1, 2))
+
+    val c = Future.all(List(two, three, one))
+    val cr = Await.result(c, 1 second)
+    assert(cr === List(2, 3, 1))
+
+    val allNever = Future.all[Int](List(one, never, two))
+    try {
+      Await.result(allNever, 1 second)
+      assert(false)
+    } catch {
+      case t: TimeoutException =>
     }
   }
 
