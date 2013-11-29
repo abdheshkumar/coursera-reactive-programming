@@ -13,6 +13,7 @@ import gui._
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import scala.collection.mutable
 
 
 @RunWith(classOf[JUnitRunner])
@@ -66,5 +67,31 @@ class WikipediaApiTest extends FunSuite {
       s => total = s
     }
     assert(total == (1 + 1 + 2 + 1 + 2 + 3), s"Sum: $total")
+  }
+
+  test("timedOut") {
+    val o = Observable(1, 2, 3).zip(Observable.interval(700 millis)).timedOut(1L)
+    assert(o.toBlockingObservable.toList.length === 1)
+  }
+
+  test("timedOut should collect the correct number of values") {
+   val clock = Observable.interval(0.1 second)
+   val timedOut = clock.timedOut(1)
+   val v = timedOut.toBlockingObservable.toList.length
+   assert(v === 10)
+ }
+
+  test("concatRecovered") {
+    val a = Observable(1, 2, 3, 4, 5)
+    val b: Int => Observable[Int] = num => if (num != 4) Observable(num) else Observable(new Exception)
+    val c = a.concatRecovered(b)
+    val v = c.toBlockingObservable.toList
+    assert (v.length === 5)
+
+    val x = Observable(1, 2, 3).concatRecovered(num => Observable(num, num, num))
+    val xv = x.toBlockingObservable.toList.map(_.get)
+    val y = Observable(1, 1, 1, 2, 2, 2, 3, 3, 3)
+    val yv = y.toBlockingObservable.toList
+    assert(xv === yv)
   }
 }
