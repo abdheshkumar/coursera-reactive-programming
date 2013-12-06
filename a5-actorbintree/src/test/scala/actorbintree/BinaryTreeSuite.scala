@@ -32,6 +32,7 @@ class BinaryTreeSuite(_system: ActorSystem) extends TestKit(_system) with FunSui
       val replies = repliesUnsorted.sortBy(_.id)
       if (replies != expectedReplies) {
         val pairs = (replies zip expectedReplies).zipWithIndex filter (x => x._1._1 != x._1._2)
+        println(replies.take(15))
         fail("unexpected replies:" + pairs.map(x => s"at index ${x._2}: got ${x._1._1}, expected ${x._1._2}").mkString("\n    ", "\n    ", ""))
       }
     }
